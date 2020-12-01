@@ -2,8 +2,8 @@
 // Created by m8 on 11/27/20.
 //
 
-#ifndef PEERCONNECTIONTEST_OBSERVABLE_H
-#define PEERCONNECTIONTEST_OBSERVABLE_H
+#ifndef LIVECHANGE_OBSERVABLE_H
+#define LIVECHANGE_OBSERVABLE_H
 
 #include <string>
 #include <functional>
@@ -40,4 +40,4 @@ namespace livechange {
 
 }
 
-#endif //PEERCONNECTIONTEST_OBSERVABLE_H
+#endif //LIVECHANGE_OBSERVABLE_H
