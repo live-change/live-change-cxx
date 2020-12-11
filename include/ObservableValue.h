@@ -14,11 +14,13 @@ namespace livechange {
     bool initialized;
   public:
     nlohmann::json value;
-    Observer observer;
 
     ObservableValue();
 
     void set(nlohmann::json value);
+
+    static const int type = 0x01;
+    virtual int observableType() override;
 
     virtual void observe(const Observer observer) override;
     virtual void unobserve(const Observer observer) override;

@@ -2,6 +2,10 @@
 
 namespace livechange {
 
+  int ObservableValue::observableType() {
+    return ObservableValue::type;
+  }
+
   void handleValueSignal(std::shared_ptr<ObservableValue> observable, std::string signal, nlohmann::json args) {
     if(signal == "set") {
       observable->set(args[0]);

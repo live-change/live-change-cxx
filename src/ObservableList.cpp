@@ -2,6 +2,10 @@
 
 namespace livechange {
 
+  int ObservableList::observableType() {
+    return ObservableList::type;
+  }
+
   void handleListSignal(std::shared_ptr<ObservableList> list, std::string signal, nlohmann::json args) {
     if(signal == "set") {
       list->set(args[0]);

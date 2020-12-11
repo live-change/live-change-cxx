@@ -12,6 +12,8 @@
 namespace livechange {
 
   using Observer = std::shared_ptr<std::function<void (std::string singal, nlohmann::json args )>>;
+  using DisposeCallback = std::shared_ptr<std::function<void ()>>;
+  using RespawnCallback = std::shared_ptr<std::function<void ()>>;
 
   class Observable {
   protected:
@@ -24,6 +26,10 @@ namespace livechange {
     virtual void respawn();
 
   public:
+    Observer observer;
+    static const int type = 0x00;
+
+    virtual int observableType();
 
     virtual void observe(const Observer observer);
     virtual void unobserve(const Observer observer);
@@ -34,6 +40,9 @@ namespace livechange {
     bool isDisposed() {
       return disposed;
     }
+
+    std::vector<DisposeCallback> onDispose;
+    std::vector<RespawnCallback> onRespawn;
   };
 
 

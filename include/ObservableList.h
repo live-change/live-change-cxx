@@ -14,7 +14,6 @@ namespace livechange {
     bool initialized;
   public:
     nlohmann::json list;
-    Observer observer;
 
     ObservableList();
 
@@ -32,6 +31,9 @@ namespace livechange {
     //void update(nlohmann::json what, nlohmann::json with);
     void updateByField(std::string field, nlohmann::json value, nlohmann::json element, nlohmann::json oldElement);
     //void updateBy(nlohmann::json fields, nlohmann::json with);
+
+    static const int type = 0x02;
+    virtual int observableType() override;
 
     virtual void observe(const Observer observer) override;
     virtual void unobserve(const Observer observer) override;

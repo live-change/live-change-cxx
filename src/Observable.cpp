@@ -2,15 +2,21 @@
 
 namespace livechange {
 
+  int Observable::observableType() {
+    return Observable::type;
+  }
+
   void Observable::fireObservers(const std::string& signal, const nlohmann::json& args) const {
     for(auto observer : observers) (*observer)(signal, args);
   }
 
   void Observable::dispose() {
     disposed = true;
+    for(auto callback : onDispose) (*callback)();
   }
   void Observable::respawn() {
     disposed = false;
+    for(auto callback : onRespawn) (*callback)();
   }
 
   void Observable::observe(const Observer observer) {
