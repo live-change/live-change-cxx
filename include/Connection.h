@@ -10,17 +10,46 @@
 #include "nlohmann/json.hpp"
 #include "Observable.h"
 #include <WebSocket.h>
+#include <condition_variable>
+
+#ifndef _NOEXCEPT
+#define _NOEXCEPT _GLIBCXX_USE_NOEXCEPT _GLIBCXX_TXN_SAFE_DYN
+#endif
 
 namespace livechange {
 
   class Connection;
 
+  class DisconnectError : public std::exception {
+  public:
+    std::string message;
+    DisconnectError() {}
+    virtual const char* what() const _NOEXCEPT override { return "Server disconnected"; }
+  };
+
+  class TimeoutError : public std::exception {
+  public:
+    std::string message;
+    TimeoutError() {}
+    virtual const char* what() const _NOEXCEPT override { return "Server disconnected"; }
+  };
+
+  class RemoteError : public std::exception {
+  public:
+    std::string message;
+    RemoteError(nlohmann::json error) {
+      message = "Remote error: "+error;
+    }
+    virtual const char* what() const _NOEXCEPT override { return message.c_str(); }
+  };
+
   class Observation {
   protected:
-    std::shared_ptr<Connection> connection;
+    std::shared_ptr<Connection> connection; /// CIRCURAL REFERENCE, CONVERT TO WEAKPTR!!!
     nlohmann::json path;
     std::vector<std::shared_ptr<Observable>> observables;
     std::vector<nlohmann::json> cachedSignals;
+    std::mutex stateMutex;
 
     void addObservable(std::shared_ptr<Observable> observable);
     void removeObservable(std::shared_ptr<Observable> observable);
@@ -40,21 +69,32 @@ namespace livechange {
       addReactions(observable);
       addObservable(observable);
     }
+    void handleDisconnect();
+    void handleConnect();
+    void handleNotifyMessage(const nlohmann::json& message);
   };
 
   class RequestSettings {
   public:
-    int timeout = 10000;
-    int sentTimeout = 2300;
+    std::chrono::steady_clock::duration timeout = std::chrono::duration<int,std::milli>(10000);
+    std::chrono::steady_clock::duration sentTimeout = std::chrono::duration<int,std::milli>(2300);
     bool queueWhenDisconnected = false;
   };
 
-  class Request {
+class Request : public std::enable_shared_from_this<Request> {
   public:
     int requestId;
+    nlohmann::json message;
+    std::chrono::steady_clock::time_point startPoint;
+    bool hasTimeout;
     std::chrono::steady_clock::time_point timeoutPoint;
     promise::Promise<nlohmann::json> resultPromise;
     RequestSettings settings;
+    std::weak_ptr<Connection> connection;
+    std::mutex stateMutex;
+
+    Request(std::shared_ptr<Connection> connectionp, int requestIdp,
+            nlohmann::json msgp, RequestSettings settingsp);
     void handleMessage(const nlohmann::json message);
     void handleDisconnect();
     void handleTimeout();
@@ -63,13 +103,16 @@ namespace livechange {
   class Connection : std::enable_shared_from_this<Connection> {
   protected:
     std::string url;
+    nlohmann::json sessionId;
 
     std::map<nlohmann::json, std::shared_ptr<Observation>> observations;
     std::vector<std::shared_ptr<Request>> waitingRequests;
     std::vector<std::shared_ptr<Request>> requestsQueue;
+    int lastRequestId;
 
     std::shared_ptr<wsxx::WebSocket> webSocket;
     friend class Observation;
+    friend class Request;
 
     void handleOpen();
     void handleMessage(std::string data, wsxx::WebSocket::PacketType type);
@@ -79,9 +122,15 @@ namespace livechange {
     promise::Promise<nlohmann::json> sendRequest(
         const nlohmann::json& msg, RequestSettings settings = RequestSettings());
 
+    std::mutex stateMutex;
+    int connectedCounter;
+    std::thread timeoutThread;
+    std::condition_variable timeoutCondition;
+
   public:
-    Connection(std::string urlp);
+    Connection(std::string urlp, nlohmann::json sessionIdp);
     ~Connection();
+    void init();
 
     promise::Promise<nlohmann::json> get(nlohmann::json path);
     std::shared_ptr<Observation> observation(nlohmann::json path) {
