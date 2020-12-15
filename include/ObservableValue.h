@@ -9,13 +9,14 @@
 
 namespace livechange {
 
-  class ObservableValue : Observable, std::enable_shared_from_this<ObservableValue> {
+  class ObservableValue : public Observable, public std::enable_shared_from_this<ObservableValue> {
   protected:
     bool initialized;
   public:
     nlohmann::json value;
 
     ObservableValue();
+    void init();
 
     void set(nlohmann::json value);
 

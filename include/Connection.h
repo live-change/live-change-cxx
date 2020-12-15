@@ -38,14 +38,14 @@ namespace livechange {
   public:
     std::string message;
     RemoteError(nlohmann::json error) {
-      message = "Remote error: "+error;
+      message = std::string("Remote error: ") + error.dump();
     }
     virtual const char* what() const _NOEXCEPT override { return message.c_str(); }
   };
 
   class Observation {
   protected:
-    std::shared_ptr<Connection> connection; /// CIRCURAL REFERENCE, CONVERT TO WEAKPTR!!!
+    std::weak_ptr<Connection> connection; /// CIRCURAL REFERENCE, CONVERT TO WEAKPTR!!!
     nlohmann::json path;
     std::vector<std::shared_ptr<Observable>> observables;
     std::vector<nlohmann::json> cachedSignals;
@@ -56,18 +56,20 @@ namespace livechange {
     void addReactions(std::shared_ptr<Observable> observable);
   public:
 
-    Observation(std::shared_ptr<Connection> connection, nlohmann::json pathp) : path(pathp) {
+    Observation(std::shared_ptr<Connection> connectionp, nlohmann::json pathp) : connection(connectionp), path(pathp) {
     }
-    template<typename T> T observable(nlohmann::json path) {
+    template<typename T> std::shared_ptr<T> observable() {
       int type = T::type;
       for(auto observable : observables) {
         if(observable->type == type) {
-          return observable;
+          return std::dynamic_pointer_cast<T>(observable);
         }
       }
-      auto observable = std::make_shared<T>();
+      std::shared_ptr<T> observable = std::make_shared<T>();
+      observable->init();
       addReactions(observable);
       addObservable(observable);
+      return observable;
     }
     void handleDisconnect();
     void handleConnect();
@@ -100,7 +102,7 @@ class Request : public std::enable_shared_from_this<Request> {
     void handleTimeout();
   };
 
-  class Connection : std::enable_shared_from_this<Connection> {
+  class Connection : public std::enable_shared_from_this<Connection> {
   protected:
     std::string url;
     nlohmann::json sessionId;
@@ -143,7 +145,7 @@ class Request : public std::enable_shared_from_this<Request> {
       return observation;
     }
 
-    template<typename T> T observable(nlohmann::json path) {
+    template<typename T> std::shared_ptr<T> observable(nlohmann::json path) {
       auto observationInstance = observation(path);
       return observationInstance->observable<T>();
     }

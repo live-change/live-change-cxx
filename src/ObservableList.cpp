@@ -26,6 +26,9 @@ namespace livechange {
   }
 
   ObservableList::ObservableList() {
+  }
+
+  void ObservableList::init() {
     using namespace std::placeholders;
     std::function<void(std::string signal, nlohmann::json args)> f =
         std::bind(&handleListSignal, shared_from_this(), _1, _2);

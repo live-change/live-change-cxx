@@ -21,13 +21,15 @@ namespace livechange {
   void Observation::addObservable(std::shared_ptr<Observable> observable) {
     std::lock_guard<std::mutex> guard(stateMutex);
     observables.push_back(observable);
-    if (observables.size() == 1 && connection->isConnected()) {
+    auto connectionPtr = connection.lock();
+    if(!connectionPtr) return;
+    if (observables.size() == 1 && connectionPtr->isConnected()) {
       nlohmann::json msg = {
           { "type", "observe" },
           { "what", path },
           { "pushed", false }
       };
-      connection->send(msg);
+      connectionPtr->send(msg);
     }
     Observer observer = observable->observer;
     for (auto signal : cachedSignals) {
@@ -46,7 +48,9 @@ namespace livechange {
           { "what", path },
           { "pushed", false }
       };
-      connection->send(msg);
+      auto connectionPtr = connection.lock();
+      if(!connectionPtr) return;
+      connectionPtr->send(msg);
     }
   }
   void Observation::handleNotifyMessage(const nlohmann::json& message) {
@@ -62,16 +66,18 @@ namespace livechange {
     observables.erase(std::remove_if(observables.begin(), observables.end(),
                                    [&observable](auto o) { return o == observable; } ));
     if (observables.size() == 0) {
-      if(connection->isConnected()) {
+      auto connectionPtr = connection.lock();
+      if(!connectionPtr) return;
+      if(connectionPtr->isConnected()) {
         nlohmann::json msg = {
             {"type",   "unobserve"},
             {"what",   path},
             {"pushed", false}
         };
-        connection->send(msg.dump());
+        connectionPtr->send(msg.dump());
       }
       cachedSignals.clear();
-      connection->observations.erase(path); // TODO: analyze if this can lead to observation duplication
+      connectionPtr->observations.erase(path); // TODO: analyze if this can lead to observation duplication
     }
   }
 
@@ -87,7 +93,7 @@ namespace livechange {
     if(message["type"] == "error") {
       resultPromise.reject(std::make_exception_ptr(RemoteError(message["error"])));
     } else {
-      resultPromise.resolve(message["response"])
+      resultPromise.resolve(message["response"]);
     }
   }
   void Request::handleDisconnect() {
@@ -182,6 +188,7 @@ namespace livechange {
     }
     send(request->message);
     timeoutCondition.notify_one();
+    return request->resultPromise;
   }
 
   void Connection::handleOpen() {

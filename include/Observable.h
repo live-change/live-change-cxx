@@ -11,7 +11,8 @@
 
 namespace livechange {
 
-  using Observer = std::shared_ptr<std::function<void (std::string singal, nlohmann::json args )>>;
+  using ObserverFunction = std::function<void (std::string singal, nlohmann::json args )>;
+  using Observer = std::shared_ptr<ObserverFunction>;
   using DisposeCallback = std::shared_ptr<std::function<void ()>>;
   using RespawnCallback = std::shared_ptr<std::function<void ()>>;
 

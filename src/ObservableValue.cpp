@@ -15,6 +15,9 @@ namespace livechange {
   }
 
   ObservableValue::ObservableValue() {
+
+  }
+  void ObservableValue::init() {
     using namespace std::placeholders;
     std::function<void(std::string signal, nlohmann::json args)> f =
         std::bind(&handleValueSignal, shared_from_this(), _1, _2);
