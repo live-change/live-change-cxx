@@ -88,12 +88,14 @@ namespace livechange {
     message["requestId"] = requestId;
     startPoint = std::chrono::steady_clock::now();
     timeoutPoint = startPoint + settings.timeout;
+    resultPromise = std::make_shared<promise::Promise<nlohmann::json>>();
   }
   void Request::handleMessage(const nlohmann::json message) {
     if(message["type"] == "error") {
-      resultPromise.reject(std::make_exception_ptr(RemoteError(message["error"])));
+      resultPromise->reject(std::make_exception_ptr(RemoteError(message["error"])));
     } else {
-      resultPromise.resolve(message["response"]);
+      printf("RESOLVE PROMISE %s\n", message["response"].dump(2).c_str());
+      resultPromise->resolve(message["response"]);
     }
   }
   void Request::handleDisconnect() {
@@ -107,11 +109,11 @@ namespace livechange {
         ptr->requestsQueue.push_back(shared_from_this());
       }
     } else {
-      resultPromise.reject(std::make_exception_ptr(DisconnectError()));
+      resultPromise->reject(std::make_exception_ptr(DisconnectError()));
     }
   }
   void Request::handleTimeout() {
-    resultPromise.reject(std::make_exception_ptr(TimeoutError()));
+    resultPromise->reject(std::make_exception_ptr(TimeoutError()));
   }
 
   Connection::Connection(std::string urlp, nlohmann::json sessionIdp) : url(urlp), sessionId(sessionIdp),
@@ -173,20 +175,21 @@ namespace livechange {
   }
 
   void Connection::send(const nlohmann::json& msg) {
+    printf("SEND MSG %s\n", msg.dump(2).c_str());
     webSocket->send(msg.dump(), wsxx::WebSocket::PacketType::Text);
   }
 
-  promise::Promise<nlohmann::json> Connection::sendRequest(
+  std::shared_ptr<promise::Promise<nlohmann::json>> Connection::sendRequest(
       const nlohmann::json& msg, RequestSettings settings) {
     std::lock_guard<std::mutex> guard(stateMutex);
 
     auto request = std::make_shared<Request>(shared_from_this(), ++lastRequestId, msg, settings);
     if(isConnected()) {
       waitingRequests.push_back(request);
+      send(request->message);
     } else {
       requestsQueue.push_back(request);
     }
-    send(request->message);
     timeoutCondition.notify_one();
     return request->resultPromise;
   }
@@ -210,8 +213,11 @@ namespace livechange {
   void Connection::handleMessage(std::string data, wsxx::WebSocket::PacketType type) {
     std::lock_guard<std::mutex> guard(stateMutex);
 
+    printf("HANDLE MESSAGE %d\n", type);
+
     if(type == wsxx::WebSocket::PacketType::Text) {
       auto msg = nlohmann::json::parse(data);
+      printf("RECV MSG %s\n", msg.dump(2).c_str());
       std::string type = msg["type"];
       if(type == "pong") {
 
@@ -223,8 +229,10 @@ namespace livechange {
         this->webSocket->closeConnection();
       } else if(msg.contains("responseId")) {
         int responseId = msg["responseId"];
+        printf("RESPONSE MSG %d\n", responseId);
         for(int i = 0; i < waitingRequests.size(); i++) {
           auto request = waitingRequests[i];
+          printf("WAITING REQUEST %d\n", request->requestId);
           if(request->requestId == responseId) {
             request->handleMessage(msg);
             waitingRequests.erase(waitingRequests.begin() + i);
@@ -280,5 +288,22 @@ namespace livechange {
     };
     webSocket = std::make_shared<wsxx::WebSocket>(url, onOpen, onWsMessage, onWsClose);
   }
+
+  std::shared_ptr<promise::Promise<nlohmann::json>> Connection::get(nlohmann::json path,
+                                                   RequestSettings settings) {
+    return sendRequest({
+           { "type", "get" },
+           { "what", path }
+       }, settings);
+  }
+  std::shared_ptr<promise::Promise<nlohmann::json>> Connection::request(nlohmann::json method, nlohmann::json args,
+                                                       RequestSettings settings) {
+    return sendRequest({
+        { "type", "request" },
+        { "method", method },
+        { "args", args}
+      }, settings);
+  }
+
 
 }

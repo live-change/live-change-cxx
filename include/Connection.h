@@ -90,7 +90,7 @@ class Request : public std::enable_shared_from_this<Request> {
     std::chrono::steady_clock::time_point startPoint;
     bool hasTimeout;
     std::chrono::steady_clock::time_point timeoutPoint;
-    promise::Promise<nlohmann::json> resultPromise;
+    std::shared_ptr<promise::Promise<nlohmann::json>> resultPromise;
     RequestSettings settings;
     std::weak_ptr<Connection> connection;
     std::mutex stateMutex;
@@ -121,7 +121,7 @@ class Request : public std::enable_shared_from_this<Request> {
     void handleClose(int code, std::string reason, bool wasClean);
 
     void send(const nlohmann::json& msg);
-    promise::Promise<nlohmann::json> sendRequest(
+    std::shared_ptr<promise::Promise<nlohmann::json>> sendRequest(
         const nlohmann::json& msg, RequestSettings settings = RequestSettings());
 
     std::mutex stateMutex;
@@ -134,7 +134,6 @@ class Request : public std::enable_shared_from_this<Request> {
     ~Connection();
     void init();
 
-    promise::Promise<nlohmann::json> get(nlohmann::json path);
     std::shared_ptr<Observation> observation(nlohmann::json path) {
       auto it = observations.find(path);
       if(it != observations.end()) {
@@ -150,7 +149,10 @@ class Request : public std::enable_shared_from_this<Request> {
       return observationInstance->observable<T>();
     }
 
-    promise::Promise<nlohmann::json> request(nlohmann::json method, nlohmann::json args);
+    std::shared_ptr<promise::Promise<nlohmann::json>> get(nlohmann::json path,
+                                         RequestSettings settings = RequestSettings());
+    std::shared_ptr<promise::Promise<nlohmann::json>> request(nlohmann::json method, nlohmann::json args,
+                                             RequestSettings settings = RequestSettings());
 
     bool isConnected();
 
