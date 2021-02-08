@@ -26,12 +26,14 @@ namespace livechange {
 
   void ObservableValue::set(nlohmann::json value) {
     this->value = value;
-    this->fireObservers("set", { value });
+    nlohmann::json args = nlohmann::json::array({ value });
+    this->fireObservers("set", args);
   }
 
   void ObservableValue::observe(const Observer observer) {
     observers.push_back(observer);
-    (*observer)("set", { value });
+    nlohmann::json args = nlohmann::json::array({ value });
+    (*observer)("set", args);
   }
 
   void ObservableValue::unobserve(const Observer observer) {

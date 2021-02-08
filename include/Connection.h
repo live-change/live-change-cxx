@@ -83,7 +83,7 @@ namespace livechange {
     bool queueWhenDisconnected = false;
   };
 
-class Request : public std::enable_shared_from_this<Request> {
+  class Request : public std::enable_shared_from_this<Request> {
   public:
     int requestId;
     nlohmann::json message;

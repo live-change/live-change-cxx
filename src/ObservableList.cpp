@@ -37,12 +37,14 @@ namespace livechange {
 
   void ObservableList::set(nlohmann::json value) {
     list = value;
-    this->fireObservers("set", { value });
+    nlohmann::json args = nlohmann::json::array({ value });
+    this->fireObservers("set", args);
   }
 
   void ObservableList::push(nlohmann::json value) {
     list.push_back(value);
-    this->fireObservers("push", { value });
+    nlohmann::json args = nlohmann::json::array({ value });
+    this->fireObservers("push", args);
   }
 
   //void unshift(nlohmann::json value);
@@ -75,7 +77,8 @@ namespace livechange {
       list.insert(list.begin(), element);
     }
     done:
-    fireObservers("putByField", { field, value, element, reverse, oldElement });
+    nlohmann::json args = nlohmann::json::array({ field, value, element, reverse, oldElement });
+    fireObservers("putByField", args);
   }
 
   //void remove(nlohmann::json element);
@@ -86,7 +89,8 @@ namespace livechange {
         i--;
       }
     }
-    fireObservers("removeByField", { field, value, oldElement });
+    nlohmann::json args = nlohmann::json::array({ field, value, oldElement });
+    fireObservers("removeByField", args);
   }
 
   //void removeBy(nlohmann::json fields);
@@ -98,13 +102,15 @@ namespace livechange {
         list[i] = element;
       }
     }
-    fireObservers("updateByField", { field, value, element, oldElement });
+    nlohmann::json args = nlohmann::json::array({ field, value, element, oldElement });
+    fireObservers("updateByField", args);
   }
   //void updateBy(nlohmann::json fields, nlohmann::json with);
 
   void ObservableList::observe(const Observer observer) {
     observers.push_back(observer);
-    (*observer)("set", { list });
+    nlohmann::json args = { list };
+    (*observer)("set", args);
   }
 
   void ObservableList::unobserve(const Observer observer) {

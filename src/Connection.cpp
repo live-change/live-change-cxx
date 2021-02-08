@@ -94,8 +94,13 @@ namespace livechange {
     if(message["type"] == "error") {
       resultPromise->reject(std::make_exception_ptr(RemoteError(message["error"])));
     } else {
-      printf("RESOLVE PROMISE %s\n", message["response"].dump(2).c_str());
-      resultPromise->resolve(message["response"]);
+      if(message.contains("response")) {
+        printf("RESOLVE PROMISE %s\n", message["response"].dump(2).c_str());
+        resultPromise->resolve(message["response"]);
+      } else {
+        printf("RESOLVE PROMISE undefined converted to null\n");
+        resultPromise->resolve(nullptr);
+      }
     }
   }
   void Request::handleDisconnect() {
@@ -213,7 +218,7 @@ namespace livechange {
   void Connection::handleMessage(std::string data, wsxx::WebSocket::PacketType type) {
     std::lock_guard<std::mutex> guard(stateMutex);
 
-    printf("HANDLE MESSAGE %d\n", type);
+   // printf("HANDLE MESSAGE %d\n", type);
 
     if(type == wsxx::WebSocket::PacketType::Text) {
       auto msg = nlohmann::json::parse(data);
