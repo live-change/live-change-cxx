@@ -88,7 +88,7 @@ namespace livechange {
     message["requestId"] = requestId;
     startPoint = std::chrono::steady_clock::now();
     timeoutPoint = startPoint + settings.timeout;
-    resultPromise = std::make_shared<promise::Promise<nlohmann::json>>();
+    resultPromise = std::make_shared<Promise<nlohmann::json>>();
   }
   void Request::handleMessage(const nlohmann::json message) {
     if(message["type"] == "error") {
@@ -184,7 +184,7 @@ namespace livechange {
     webSocket->send(msg.dump(), wsxx::WebSocket::PacketType::Text);
   }
 
-  std::shared_ptr<promise::Promise<nlohmann::json>> Connection::sendRequest(
+  std::shared_ptr<Promise<nlohmann::json>> Connection::sendRequest(
       const nlohmann::json& msg, RequestSettings settings) {
     std::lock_guard<std::mutex> guard(stateMutex);
 
@@ -294,14 +294,14 @@ namespace livechange {
     webSocket = std::make_shared<wsxx::WebSocket>(url, onOpen, onWsMessage, onWsClose);
   }
 
-  std::shared_ptr<promise::Promise<nlohmann::json>> Connection::get(nlohmann::json path,
+  std::shared_ptr<Promise<nlohmann::json>> Connection::get(nlohmann::json path,
                                                    RequestSettings settings) {
     return sendRequest({
            { "type", "get" },
            { "what", path }
        }, settings);
   }
-  std::shared_ptr<promise::Promise<nlohmann::json>> Connection::request(nlohmann::json method, nlohmann::json args,
+  std::shared_ptr<Promise<nlohmann::json>> Connection::request(nlohmann::json method, nlohmann::json args,
                                                        RequestSettings settings) {
     return sendRequest({
         { "type", "request" },

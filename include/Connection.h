@@ -90,7 +90,7 @@ namespace livechange {
     std::chrono::steady_clock::time_point startPoint;
     bool hasTimeout;
     std::chrono::steady_clock::time_point timeoutPoint;
-    std::shared_ptr<promise::Promise<nlohmann::json>> resultPromise;
+    std::shared_ptr<Promise<nlohmann::json>> resultPromise;
     RequestSettings settings;
     std::weak_ptr<Connection> connection;
     std::mutex stateMutex;
@@ -121,7 +121,7 @@ namespace livechange {
     void handleClose(int code, std::string reason, bool wasClean);
 
     void send(const nlohmann::json& msg);
-    std::shared_ptr<promise::Promise<nlohmann::json>> sendRequest(
+    std::shared_ptr<Promise<nlohmann::json>> sendRequest(
         const nlohmann::json& msg, RequestSettings settings = RequestSettings());
 
     std::mutex stateMutex;
@@ -149,9 +149,9 @@ namespace livechange {
       return observationInstance->observable<T>();
     }
 
-    std::shared_ptr<promise::Promise<nlohmann::json>> get(nlohmann::json path,
+    std::shared_ptr<Promise<nlohmann::json>> get(nlohmann::json path,
                                          RequestSettings settings = RequestSettings());
-    std::shared_ptr<promise::Promise<nlohmann::json>> request(nlohmann::json method, nlohmann::json args,
+    std::shared_ptr<Promise<nlohmann::json>> request(nlohmann::json method, nlohmann::json args,
                                              RequestSettings settings = RequestSettings());
 
     bool isConnected();
